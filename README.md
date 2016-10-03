@@ -24,6 +24,7 @@ This project provides a cross-platform command line interface for developers and
   * HDInsight (Note: The HDInsight commands in ASM mode are deprecated and will be removed by Jan. 2017)
   * Key Vault
   * Batch
+* Service fabric management (Only works for Linux cluster currently, coming soon on Windows cluster)
 
 Note: The list of features may not be up-to-date. For accurate command details, type `azure` | `azure -h` | `azure --help` to navigate through the help system. Also, use `azure config mode asm|arm` to switch between service management (Version V1)and resource management (Version V2) of the Azure REST API.
 
@@ -34,6 +35,9 @@ The CLI targets **"Public Azure Cloud"** by default. You can get more informatio
 ## Non-Interactive Authentication
 If you need to create an automation account for non interactive or scripting scenarios then please take a look at the documentation over [here](https://github.com/Azure/azure-sdk-for-node/blob/master/Documentation/Authentication.md).
 
+## Supported Environment Variables
+
+Please take a look at the list of supported environment variables over [here](https://github.com/Azure/azure-xplat-cli/wiki/Environment-Variables).
 
 ## Installation
 
@@ -89,7 +93,10 @@ To enable it in bash, run:
 
 ```bash
 azure --completion >> ~/azure.completion.sh
+# For macOS Terminal(login shell)
 echo 'source ~/azure.completion.sh' >> ~/.bash_profile
+# For Linux Terminal(non-login shell)
+echo 'source ~/azure.completion.sh' >> ~/.bashrc
 ```
 
 ## Get Started

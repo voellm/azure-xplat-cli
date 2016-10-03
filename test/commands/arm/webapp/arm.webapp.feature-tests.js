@@ -20,6 +20,7 @@ var util = require('util');
 var CLITest = require('../../../framework/arm-cli-test');
 var profile = require('../../../../lib/util/profile');
 var utils = require('../../../../lib/util/utils');
+var webappUtils = require('../../../../lib/commands/arm/webapp/webappUtils');
 
 var testPrefix = 'arm-cli-webapp-tests';
 
@@ -28,8 +29,13 @@ var createdSites = [];
 var location = 'West US';
 var createdGroups = [];
 var createdResources = [];
+var createdAppSettingsKeys = [];
+var createdAppSettingsValues = [];
+
 var hostingPlanName, groupName;
-var resourceClient;
+var appSettingKey, appSettingValue, finalAppSetting;
+var client;
+var updatedPHPValue = "7.0";
 
 describe('arm', function () {
   var suite;
@@ -37,10 +43,13 @@ describe('arm', function () {
   before(function (done) {
     suite = new CLITest(this, testPrefix);
     suite.setupSuite(function () {
-      sitename = suite.generateId('webappclitest', createdSites);
+      sitename = suite.generateId('webappclitests', createdSites);
       groupName = suite.generateId('testrg1', createdGroups);
+      appSettingKey = suite.generateId('testkey1', createdAppSettingsKeys);
+      appSettingValue = suite.generateId('testval1', createdAppSettingsValues);
+      finalAppSetting = appSettingKey + '=' + appSettingValue;
       var subscription = profile.current.getSubscription();
-      resourceClient = utils.createResourceClient(subscription);
+      client = webappUtils.createWebappManagementClient(subscription);
       if (!suite.isPlayback()) {
         suite.execute('group create %s --location %s --json', groupName, location, function (result) {
           result.exitStatus.should.equal(0);
@@ -52,7 +61,6 @@ describe('arm', function () {
       } else {
         done();
       }
-
     });
   });
 
@@ -101,7 +109,49 @@ describe('arm', function () {
       suite.execute('webapp show %s %s --json', groupName, sitename, function (result) {
         result.exitStatus.should.equal(0);
         var webapp = JSON.parse(result.text);
-        webapp.webSite.name.should.equal(sitename);
+        webapp.name.should.equal(sitename);
+        done();
+      });
+    });
+
+    it('config show should work', function (done) {
+      suite.execute('webapp config show %s %s --json', groupName, sitename, function (result) {
+        result.exitStatus.should.equal(0);
+        done();
+      });
+    });
+
+    it('config set should work', function (done) {
+      suite.execute('webapp config set %s %s --phpversion %s --json', groupName, sitename, updatedPHPValue, function (result) {
+        result.exitStatus.should.equal(0);
+        done();
+      });
+    });
+
+    it('config appsettings set should work', function (done) {
+      suite.execute('webapp config appsettings set %s %s %s --json', groupName, sitename, finalAppSetting, function (result) {
+        result.exitStatus.should.equal(0);
+        done();
+      });
+    });
+
+    it('config appsettings list should work', function (done) {
+      suite.execute('webapp config appsettings list %s %s --json', groupName, sitename, function (result) {
+        result.exitStatus.should.equal(0);
+        done();
+      });
+    });
+
+    it('config appsettings delete should work', function (done) {
+      suite.execute('webapp config appsettings delete %s %s %s --json', groupName, sitename, appSettingKey, function (result) {
+        result.exitStatus.should.equal(0);
+        done();
+      });
+    });
+
+    it('publishingprofile show should work', function (done) {
+      suite.execute('webapp publishingprofile show %s %s --json', groupName, sitename, function (result) {
+        result.exitStatus.should.equal(0);
         done();
       });
     });
@@ -135,37 +185,22 @@ describe('arm', function () {
     });
   });
 
-  function createGroupAndPlan(done) {
-    createGroup(function (err, groupName) {
-      if (err) { return done(err); }
-      createHostingPlan(groupName, function (err, planId) {
-        if (err) { return done(err); }
-        return done(null, { group: groupName, plan: planId });
-      });
-    });
-  }
 
   function createHostingPlan(groupName, done) {
     hostingPlanName = suite.generateId(testPrefix, createdResources);
-    var planToCreate = {
-      resourceName: hostingPlanName,
-      resourceProviderNamespace: 'Microsoft.Web',
-      resourceType: 'serverFarms',
-      resourceProviderApiVersion: '2014-06-01'
-    };
 
     var planParameters = {
-      properties: {
-        sku: 'Standard',
-        numberOfWorkers: 1,
-        workerSize: 'Small',
-        hostingPlanName: hostingPlanName
-      },
-      location: location
+      location: location,
+      name: hostingPlanName,
+      sku: {
+        name: 'B1',
+        sku: 'Basic',
+        family: 'B',
+        capacity: 1
+      }
     };
 
-    resourceClient.resources.createOrUpdate(groupName, planToCreate.resourceProviderNamespace, '', planToCreate.resourceType, 
-      planToCreate.resourceName, planToCreate.resourceProviderApiVersion, planParameters, function (err, planResource) {
+    var result = client.serverFarms.createOrUpdateServerFarm(groupName, hostingPlanName, planParameters, function (err, planResource) {
       return done(err, planResource.id);
     });
   }
